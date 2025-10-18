@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import settings
-from .routers import auth, chat, goals, analysis  # Теперь analysis должен импортироваться
+from .routers import auth, chat, goals, analysis
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -23,7 +23,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(chat.router, prefix=settings.API_V1_STR)
 app.include_router(goals.router, prefix=settings.API_V1_STR)
-app.include_router(analysis.router, prefix=settings.API_V1_STR)  # Теперь этот роутер существует
+app.include_router(analysis.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
