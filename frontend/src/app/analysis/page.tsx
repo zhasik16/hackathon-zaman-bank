@@ -29,12 +29,12 @@ import {
 } from "lucide-react";
 
 const categoryColors: Record<string, string> = {
-  housing: "#3B82F6",
-  food: "#10B981",
-  transport: "#F59E0B",
-  health: "#EF4444",
-  entertainment: "#8B5CF6",
-  other: "#6B7280",
+  housing: "#2563eb", // Brighter blue
+  food: "#059669", // Brighter green
+  transport: "#d97706", // Brighter amber
+  health: "#dc2626", // Brighter red
+  entertainment: "#7c3aed", // Brighter violet
+  other: "#4b5563", // Brighter gray
 };
 
 const categoryIcons: Record<string, any> = {
@@ -57,6 +57,7 @@ export default function AnalysisPage() {
     monthlyIncome: "",
     monthlyExpenses: "",
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   // Calculate time-based multipliers
   const getTimeRangeMultiplier = (range: "week" | "month" | "year") => {
@@ -199,26 +200,52 @@ export default function AnalysisPage() {
 
   // Load user data and generate analysis
   useEffect(() => {
-    const userProfile = localStorage.getItem("userProfile");
-    if (userProfile) {
-      const user = JSON.parse(userProfile);
-      setUserData(user);
-      setEditForm({
-        monthlyIncome: user.monthlyIncome || "",
-        monthlyExpenses: user.monthlyExpenses || "",
-      });
-      const initialAnalysis = generateTimeBasedData(user, timeRange);
-      setAnalysis(initialAnalysis);
-    }
+    const loadUserData = () => {
+      setIsLoading(true);
+      try {
+        const userProfile = localStorage.getItem("userProfile");
+        if (userProfile) {
+          const user = JSON.parse(userProfile);
+          setUserData(user);
+          setEditForm({
+            monthlyIncome: user.monthlyIncome?.toString() || "",
+            monthlyExpenses: user.monthlyExpenses?.toString() || "",
+          });
+          const initialAnalysis = generateTimeBasedData(user, timeRange);
+          setAnalysis(initialAnalysis);
+        } else {
+          // Fallback demo data if no user profile exists
+          const demoUser = {
+            monthlyIncome: "500000",
+            monthlyExpenses: "350000",
+            goals: [],
+            fullName: "Демо Пользователь",
+          };
+          setUserData(demoUser);
+          setEditForm({
+            monthlyIncome: "500000",
+            monthlyExpenses: "350000",
+          });
+          const initialAnalysis = generateTimeBasedData(demoUser, timeRange);
+          setAnalysis(initialAnalysis);
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserData();
   }, []);
 
   // Update analysis when time range changes
   useEffect(() => {
-    if (userData) {
+    if (userData && !isLoading) {
       const updatedAnalysis = generateTimeBasedData(userData, timeRange);
       setAnalysis(updatedAnalysis);
     }
-  }, [timeRange, userData]);
+  }, [timeRange, userData, isLoading]);
 
   // Function to get chart data
   const getChartData = () => {
@@ -261,6 +288,12 @@ export default function AnalysisPage() {
 
   const handleSave = async () => {
     try {
+      // Validate inputs
+      if (!editForm.monthlyIncome || !editForm.monthlyExpenses) {
+        alert("Пожалуйста, заполните все поля");
+        return;
+      }
+
       // Update local storage
       const updatedUserData = {
         ...userData,
@@ -278,16 +311,17 @@ export default function AnalysisPage() {
       setIsEditing(false);
 
       // Show success message
-      // You can add a toast notification here
+      alert("Профиль успешно обновлен! Все данные пересчитаны.");
     } catch (error) {
       console.error("Error updating profile:", error);
+      alert("Ошибка при обновлении профиля. Пожалуйста, попробуйте снова.");
     }
   };
 
   const handleCancel = () => {
     setEditForm({
-      monthlyIncome: userData.monthlyIncome || "",
-      monthlyExpenses: userData.monthlyExpenses || "",
+      monthlyIncome: userData?.monthlyIncome?.toString() || "",
+      monthlyExpenses: userData?.monthlyExpenses?.toString() || "",
     });
     setIsEditing(false);
   };
@@ -309,12 +343,28 @@ export default function AnalysisPage() {
     return `${entry.name}`;
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-24 pb-8 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-white text-lg">Загрузка анализа...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!userData || !analysis) {
     return (
-      <div className="min-h-screen pt-24 pb-8 flex items-center justify-center">
+      <div className="min-h-screen pt-24 pb-8 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Загрузка анализа...</p>
+          <p className="text-white text-lg">Ошибка загрузки данных</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Обновить страницу
+          </button>
         </div>
       </div>
     );
@@ -323,21 +373,21 @@ export default function AnalysisPage() {
   const { pieData, barData } = getChartData();
 
   return (
-    <div className="min-h-screen pt-24 pb-8">
+    <div className="min-h-screen pt-24 pb-8 bg-gradient-to-br from-gray-900 to-gray-800">
       <div className="max-w-7xl mx-auto px-4">
         {/* Заголовок и кнопка редактирования */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold text-white mb-2">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+          <div className="text-center sm:text-left">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
               Анализ расходов
             </h1>
-            <p className="text-white/80 text-lg">
+            <p className="text-gray-300 text-lg">
               Управляйте вашими финансами с умом
             </p>
           </div>
           <button
             onClick={handleEdit}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors whitespace-nowrap shadow-lg"
           >
             <Edit3 className="h-4 w-4" />
             Редактировать профиль
@@ -346,15 +396,15 @@ export default function AnalysisPage() {
 
         {/* Модальное окно редактирования */}
         {isEditing && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="financial-card p-6 max-w-md w-full">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <div className="bg-gray-800 border border-gray-600 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-white">
-                  Редактировать профиль
+                  Редактировать финансовые данные
                 </h3>
                 <button
                   onClick={handleCancel}
-                  className="text-white/70 hover:text-white"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -362,7 +412,7 @@ export default function AnalysisPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-white/80 text-sm mb-2">
+                  <label className="block text-gray-300 text-sm mb-2">
                     Ежемесячный доход (₸)
                   </label>
                   <input
@@ -374,13 +424,14 @@ export default function AnalysisPage() {
                         monthlyIncome: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Введите ваш доход"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white placeholder-gray-400"
+                    placeholder="Например: 500000"
+                    min="0"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm mb-2">
+                  <label className="block text-gray-300 text-sm mb-2">
                     Ежемесячные расходы (₸)
                   </label>
                   <input
@@ -392,22 +443,30 @@ export default function AnalysisPage() {
                         monthlyExpenses: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Введите ваши расходы"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white placeholder-gray-400"
+                    placeholder="Например: 350000"
+                    min="0"
                   />
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700">
+                  <p className="text-blue-200 text-sm">
+                    💡 После сохранения все графики и рекомендации будут
+                    автоматически пересчитаны с новыми данными.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
                   <button
                     onClick={handleSave}
-                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-lg"
                   >
                     <Save className="h-4 w-4" />
-                    Сохранить
+                    Сохранить изменения
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                    className="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium"
                   >
                     Отмена
                   </button>
@@ -419,15 +478,15 @@ export default function AnalysisPage() {
 
         {/* Фильтры по времени */}
         <div className="flex justify-center mb-8">
-          <div className="glass-effect rounded-xl p-1">
+          <div className="bg-gray-800 rounded-xl p-1 border border-gray-600 shadow-lg">
             {(["week", "month", "year"] as const).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-6 py-2 rounded-lg transition-all ${
+                className={`px-4 sm:px-6 py-2 rounded-lg transition-all ${
                   timeRange === range
-                    ? "bg-white text-blue-600"
-                    : "text-white hover:bg-white/10"
+                    ? "bg-blue-600 text-white font-semibold shadow-md"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
                 }`}
               >
                 {range === "week"
@@ -441,15 +500,15 @@ export default function AnalysisPage() {
         </div>
 
         {/* Статистика с реальными данными */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="stat-card-income">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-green-900/40 to-green-800/30 border border-green-700/50 rounded-xl p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/70 text-sm">Доходы</p>
+                <p className="text-green-200 text-sm">Доходы</p>
                 <p className="text-2xl font-bold text-white">
                   {analysis.totalIncome.toLocaleString("ru-RU")} ₸
                 </p>
-                <p className="text-white/50 text-xs mt-1">
+                <p className="text-green-300 text-xs mt-1">
                   за {getTimeRangeLabel(timeRange)}
                 </p>
               </div>
@@ -457,14 +516,14 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          <div className="stat-card-expense">
+          <div className="bg-gradient-to-br from-red-900/40 to-red-800/30 border border-red-700/50 rounded-xl p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/70 text-sm">Расходы</p>
+                <p className="text-red-200 text-sm">Расходы</p>
                 <p className="text-2xl font-bold text-white">
                   {analysis.totalExpenses.toLocaleString("ru-RU")} ₸
                 </p>
-                <p className="text-white/50 text-xs mt-1">
+                <p className="text-red-300 text-xs mt-1">
                   за {getTimeRangeLabel(timeRange)}
                 </p>
               </div>
@@ -472,14 +531,14 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          <div className="stat-card-savings">
+          <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/30 border border-blue-700/50 rounded-xl p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/70 text-sm">Сбережения</p>
+                <p className="text-blue-200 text-sm">Сбережения</p>
                 <p className="text-2xl font-bold text-white">
                   {analysis.savings.toLocaleString("ru-RU")} ₸
                 </p>
-                <p className="text-white/50 text-xs mt-1">
+                <p className="text-blue-300 text-xs mt-1">
                   за {getTimeRangeLabel(timeRange)}
                 </p>
               </div>
@@ -487,35 +546,38 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          <div className="stat-card-savings">
+          <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/30 border border-purple-700/50 rounded-xl p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/70 text-sm">Норма сбережений</p>
+                <p className="text-purple-200 text-sm">Норма сбережений</p>
                 <p className="text-2xl font-bold text-white">
                   {(analysis.savingsRate * 100).toFixed(1)}%
                 </p>
-                <p className="text-white/50 text-xs mt-1">от доходов</p>
+                <p className="text-purple-300 text-xs mt-1">от доходов</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-blue-400" />
+              <TrendingUp className="h-8 w-8 text-purple-400" />
             </div>
           </div>
         </div>
 
         {/* Графики */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Круговая диаграмма */}
-          <div className="financial-card p-6">
-            <h3 className="text-xl font-bold mb-4 text-white">
+          <div className="bg-gray-800 border border-gray-600 rounded-xl p-4 sm:p-6 shadow-lg">
+            <h3 className="text-lg sm:text-xl font-bold mb-4 text-white">
               Распределение расходов за {getTimeRangeLabel(timeRange)}
             </h3>
-            <div className="h-80">
+            <div className="h-64 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    label={renderLabel}
+                    labelLine={false}
+                    label={({ name, value, percent } : any) => 
+                      `${name} (${(percent * 100).toFixed(1)}%)`
+                    }
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -529,37 +591,62 @@ export default function AnalysisPage() {
                       `${value.toLocaleString("ru-RU")} ₸`,
                       "Сумма",
                     ]}
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #4b5563',
+                      borderRadius: '8px',
+                      color: 'white',
+                    }}
                   />
-                  <Legend />
+                  <Legend 
+                    wrapperStyle={{
+                      color: 'white',
+                      fontSize: '12px'
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Столбчатая диаграмма */}
-          <div className="financial-card p-6">
-            <h3 className="text-xl font-bold mb-4 text-white">
+          <div className="bg-gray-800 border border-gray-600 rounded-xl p-4 sm:p-6 shadow-lg">
+            <h3 className="text-lg sm:text-xl font-bold mb-4 text-white">
               Расходы по категориям за {getTimeRangeLabel(timeRange)}
             </h3>
-            <div className="h-80">
+            <div className="h-64 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="category" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#4b5563" />
+                  <XAxis 
+                    dataKey="category" 
+                    stroke="#d1d5db" 
+                    fontSize={12}
+                    tick={{ fill: '#d1d5db' }}
+                  />
+                  <YAxis 
+                    stroke="#d1d5db"
+                    tick={{ fill: '#d1d5db' }}
+                  />
                   <Tooltip
                     formatter={(value: number) => [
                       `${value.toLocaleString("ru-RU")} ₸`,
                       "Сумма",
                     ]}
                     contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "none",
-                      borderRadius: "8px",
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #4b5563',
+                      borderRadius: '8px',
+                      color: 'white',
                     }}
                   />
-                  <Legend />
-                  <Bar dataKey="amount" name="Расходы" fill="#3b82f6">
+                  <Legend 
+                    wrapperStyle={{
+                      color: 'white',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Bar dataKey="amount" name="Расходы" radius={[4, 4, 0, 0]}>
                     {barData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -571,11 +658,11 @@ export default function AnalysisPage() {
         </div>
 
         {/* Сравнительная аналитика по периодам */}
-        <div className="financial-card p-6 mb-8">
-          <h3 className="text-xl font-bold mb-4 text-white">
-            Сравнительная аналитика по периодам
+        <div className="bg-gray-800 border border-gray-600 rounded-xl p-4 sm:p-6 mb-6 shadow-lg">
+          <h3 className="text-lg sm:text-xl font-bold mb-4 text-white">
+            📊 Сравнительная аналитика по периодам
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {(["week", "month", "year"] as const).map((range) => {
               const rangeAnalysis = generateTimeBasedData(userData, range);
               const rangeLabel = getTimeRangeLabel(range);
@@ -583,37 +670,51 @@ export default function AnalysisPage() {
               return (
                 <div
                   key={range}
-                  className={`p-4 rounded-xl ${
+                  className={`p-4 rounded-xl border transition-all ${
                     timeRange === range
-                      ? "bg-blue-500/20 border-2 border-blue-500"
-                      : "bg-gray-800/50"
+                      ? "bg-blue-600/20 border-blue-500 shadow-lg scale-105"
+                      : "bg-gray-700/50 border-gray-600 hover:border-gray-500"
                   }`}
                 >
-                  <h4 className="font-semibold text-white mb-3 capitalize">
-                    За {rangeLabel}
+                  <h4 className="font-semibold text-white mb-3 capitalize text-center">
+                    {range === "week" && "📅 Неделя"}
+                    {range === "month" && "📆 Месяц"}
+                    {range === "year" && "🎯 Год"}
                   </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/70">Доходы:</span>
+                      <span className="text-gray-300">Доходы:</span>
                       <span className="text-white font-semibold">
                         {rangeAnalysis.totalIncome.toLocaleString("ru-RU")} ₸
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/70">Расходы:</span>
+                      <span className="text-gray-300">Расходы:</span>
                       <span className="text-white font-semibold">
                         {rangeAnalysis.totalExpenses.toLocaleString("ru-RU")} ₸
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/70">Сбережения:</span>
-                      <span className="text-green-400 font-semibold">
+                      <span className="text-gray-300">Сбережения:</span>
+                      <span
+                        className={`font-semibold ${
+                          rangeAnalysis.savings >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
                         {rangeAnalysis.savings.toLocaleString("ru-RU")} ₸
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/70">Норма сбережений:</span>
-                      <span className="text-blue-400 font-semibold">
+                      <span className="text-gray-300">Норма сбережений:</span>
+                      <span
+                        className={`font-semibold ${
+                          rangeAnalysis.savingsRate >= 0.2
+                            ? "text-green-400"
+                            : "text-yellow-400"
+                        }`}
+                      >
                         {(rangeAnalysis.savingsRate * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -625,31 +726,33 @@ export default function AnalysisPage() {
         </div>
 
         {/* Рекомендации */}
-        <div className="financial-card p-6 mb-8">
-          <h3 className="text-xl font-bold mb-4 text-gradient-green">
-            Персональные рекомендации
+        <div className="bg-gray-800 border border-gray-600 rounded-xl p-4 sm:p-6 mb-6 shadow-lg">
+          <h3 className="text-lg sm:text-xl font-bold mb-4 text-white">
+            💡 Персональные рекомендации
           </h3>
           <div className="space-y-3">
             {analysis.recommendations.map(
               (recommendation: string, index: number) => (
                 <div
                   key={index}
-                  className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg"
+                  className="flex items-start gap-3 p-3 bg-gradient-to-r from-blue-900/30 to-green-900/30 rounded-lg border border-blue-700/50"
                 >
-                  <TrendingUp className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-blue-800">{recommendation}</p>
+                  <TrendingUp className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-blue-100 text-sm sm:text-base">
+                    {recommendation}
+                  </p>
                 </div>
               )
             )}
           </div>
         </div>
 
-        {/* Детализация расходов для всех периодов */}
-        <div className="financial-card p-6">
-          <h3 className="text-xl font-bold mb-4 text-white">
-            Детализация расходов за {getTimeRangeLabel(timeRange)}
+        {/* Детализация расходов */}
+        <div className="bg-gray-800 border border-gray-600 rounded-xl p-4 sm:p-6 shadow-lg">
+          <h3 className="text-lg sm:text-xl font-bold mb-4 text-white">
+            🏷️ Детализация расходов за {getTimeRangeLabel(timeRange)}
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {Object.entries(analysis.expensesByCategory).map(
               ([category, amount]) => {
                 const Icon = categoryIcons[category] || DollarSign;
@@ -661,21 +764,29 @@ export default function AnalysisPage() {
                 return (
                   <div
                     key={category}
-                    className="flex items-center justify-between p-4 border border-gray-600 rounded-lg bg-gray-800/30"
+                    className="flex items-center justify-between p-3 border border-gray-600 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gray-700">
-                        <Icon className="h-4 w-4 text-white" />
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ backgroundColor: categoryColors[category] + '20' }}
+                      >
+                        <Icon 
+                          className="h-4 w-4" 
+                          style={{ color: categoryColors[category] }}
+                        />
                       </div>
                       <div>
-                        <p className="font-medium text-white">
+                        <p className="font-medium text-white text-sm sm:text-base">
                           {getCategoryLabel(category)}
                         </p>
-                        <p className="text-gray-400 text-sm">{percentage}%</p>
+                        <p className="text-gray-400 text-xs">
+                          {percentage}% от расходов
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-white">
+                      <p className="font-semibold text-white text-sm sm:text-base">
                         {(amount as number).toLocaleString("ru-RU")} ₸
                       </p>
                     </div>

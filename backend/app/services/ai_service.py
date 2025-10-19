@@ -445,4 +445,4 @@ class IslamicAIService:
         }
 
 # Глобальный экземпляр сервиса
-islamic_ai_service = IslamicAIService()
+islamic_ai_service = IslamicAIService() 
